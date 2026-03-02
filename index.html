@@ -1,0 +1,839 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Revisor PSeInt – Docente (Parametrizable + CTMM)</title>
+<style>
+  :root{--bd:#ddd;--bg:#f7f7f7;--mut:#666;}
+  body{font-family:Arial,Helvetica,sans-serif;margin:16px;line-height:1.25}
+  h1{margin:0 0 6px}
+  .sub{color:#444;font-size:12px;margin:0 0 12px}
+  .panel{border:1px solid var(--bd);border-radius:12px;padding:12px;margin:12px 0;background:#fff}
+  .grid2{display:grid;grid-template-columns:1.25fr 1fr;gap:12px}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  label{font-weight:700;font-size:12px}
+  input[type=text],select{padding:7px 9px;min-width:280px}
+  button{padding:8px 10px;cursor:pointer}
+  .muted{color:var(--mut);font-size:12px}
+  .banner{border:1px dashed #bbb;border-radius:12px;padding:10px;background:#fcfcfc;margin:12px 0;font-size:12px}
+  .warn{color:#a60;font-weight:700}
+  table{width:100%;border-collapse:collapse;margin-top:10px}
+  th,td{border:1px solid var(--bd);vertical-align:top;padding:8px}
+  th{background:var(--bg);text-align:left}
+  textarea{width:100%;min-height:150px;font-family:Consolas,monospace;font-size:12px}
+  .enun{white-space:pre-wrap;background:#fafafa;border:1px solid #eee;border-radius:10px;padding:8px;font-size:12px}
+  .res{white-space:pre-wrap;font-family:Consolas,monospace;font-size:12px}
+  .gradeCell{font-weight:900;font-size:18px;text-align:center}
+  .rowbtn{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+  .pill{display:inline-block;border:1px solid var(--bd);border-radius:999px;padding:2px 8px;font-weight:800;font-size:12px}
+  .pill.na{border-style:dashed;color:#666}
+  .hide{display:none}
+  .kpi{font-weight:900;font-size:18px}
+</style>
+</head>
+<body>
+
+<h1>Revisor PSeInt – Docente (Parametrizable + CTMM)</h1>
+<p class="sub">
+Nuevo proyecto: permite que el docente cargue <b>ejercicios</b> desde un TXT y cargue por cada grupo un TXT con <b>ESTUDIANTES:</b> + código por <b>EJERCICIO 1.</b>, <b>EJERCICIO 2.</b> ...<br/>
+Regla de entradas (si aplica): antes de cada <b>Leer</b> debe existir un <b>Mostrar/Escribir</b> inmediato con “<b>y presione ENTER:</b>” y terminar en “<b>:</b>”.
+</p>
+
+<div id="storageBanner" class="banner hide"></div>
+
+<!-- A) CONFIGURACIÓN DOCENTE -->
+<div class="panel">
+  <div class="row" style="justify-content:space-between">
+    <div><b>A. Configuración del docente</b></div>
+    <span class="muted">1) Selecciona tema 2) Carga ejercicios (TXT) 3) Inicia revisión</span>
+  </div>
+
+  <div class="row" style="margin-top:10px">
+    <label for="tema">TEMA A EVALUAR:</label>
+    <select id="tema">
+      <option value="sec">Instrucciones secuenciales</option>
+      <option value="cond_simple">Estructuras condicionales simples</option>
+      <option value="cond_multiple">Estructuras condicionales múltiples</option>
+      <option value="rep">Estructuras de repetición</option>
+      <option value="fun_sin">Funciones sin retorno ni parámetros</option>
+      <option value="fun_ret_sin">Funciones con retorno, sin parámetros</option>
+      <option value="fun_ret_con">Funciones con retorno y con parámetros</option>
+    </select>
+
+    <label for="numEj">NÚM. EJERCICIOS:</label>
+    <input id="numEj" type="text" value="3" style="min-width:80px;width:90px"/>
+
+    <button id="btnCargarEj">Cargar ejercicios (TXT)</button>
+    <input id="fileEj" type="file" accept="text/plain" class="hide"/>
+    <span id="estadoEj" class="muted">Sin archivo cargado.</span>
+  </div>
+
+  <div class="row" style="margin-top:10px">
+    <label><input type="checkbox" id="chkPrompts" checked> Exigir prompts antes de Leer (Regla “y presione ENTER:”)</label>
+    <label><input type="checkbox" id="chkVars" checked> Exigir Definir ... Como ... (variables/tipos)</label>
+    <label><input type="checkbox" id="chkMensaje" checked> Exigir mensaje inicial (objetivo)</label>
+  </div>
+
+  <div class="row" style="margin-top:10px">
+    <button id="btnIniciar" disabled>Iniciar revisión</button>
+    <button id="btnResetCfg" type="button">Limpiar configuración</button>
+    <span class="muted">Separador obligatorio: <b>EJERCICIO 1.</b></span>
+  </div>
+</div>
+
+<!-- B) REVISIÓN -->
+<div class="panel">
+  <div class="row" style="justify-content:space-between">
+    <div><b>B. Revisión por grupo</b></div>
+    <span class="muted">Carga un TXT del grupo o pega manualmente</span>
+  </div>
+
+  <div class="row" style="margin-top:10px">
+    <label for="grupo">Grupo / Pareja:</label>
+    <input id="grupo" type="text" placeholder="Ej: Grupo 04 – Laura y David"/>
+    <button id="btnCargarGrupo">Cargar grupo (TXT)</button>
+    <input id="fileGrupo" type="file" accept="text/plain" class="hide"/>
+    <span id="estadoGrupo" class="muted">Sin grupo cargado.</span>
+  </div>
+
+  <div class="row" style="margin-top:10px">
+    <button id="btnRevisarTodo" type="button" disabled>Revisar TODO</button>
+    <button id="btnGuardarGrupo" type="button" disabled>Guardar grupo</button>
+    <button id="btnPDFActual" type="button" disabled>PDF (imprimir 1 hoja)</button>
+    <button id="btnLimpiarArea" type="button" disabled>Limpiar área</button>
+  </div>
+
+  <div id="tablaWrap" class="hide">
+    <table id="ejTable">
+      <thead>
+        <tr>
+          <th style="width:34%">Enunciado</th>
+          <th style="width:30%">Código PSeInt (pegar)</th>
+          <th style="width:26%">Resultado revisión</th>
+          <th style="width:10%">Nota</th>
+        </tr>
+      </thead>
+      <tbody id="ejBody"></tbody>
+    </table>
+
+    <div class="panel" style="margin-top:10px">
+      <b>Nota final (promedio real):</b> <span id="notaFinal" class="kpi">—</span>
+      <span class="muted"> ( (Ej1 + ... + EjN) / N )</span>
+    </div>
+
+    <div class="panel" style="margin-top:10px">
+      <b>Relación con CTMM</b>
+      <div class="muted" style="margin-top:6px">
+        Nota ↔ CTMM: <b>1.0–2.9 → Nivel 1</b>, <b>3.0–3.9 → Nivel 2</b>, <b>4.0–5.0 → Nivel 3</b>.
+        “No aplica” según tema/ejercicio.
+      </div>
+      <table style="margin-top:10px">
+        <thead>
+          <tr>
+            <th style="width:22%">Habilidad</th>
+            <th id="ctmmHeadEjs">Ejercicios</th>
+            <th style="width:22%">Global</th>
+          </tr>
+        </thead>
+        <tbody id="ctmmBody"></tbody>
+      </table>
+      <div style="margin-top:8px"><b>Nivel global sugerido:</b> <span id="ctmmGlobal">—</span></div>
+    </div>
+
+    <div class="grid2">
+      <div class="panel">
+        <b>Observaciones del docente</b>
+        <textarea id="obs" style="min-height:190px" placeholder="Retroalimentación formativa..."></textarea>
+        <div class="rowbtn">
+          <button id="btnCopiarInforme" type="button">Copiar informe (texto)</button>
+          <button id="btnDescargarHTML" type="button">Descargar informe (HTML)</button>
+          <button id="btnDescargarJSONActual" type="button">Descargar JSON del grupo</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <b>Grupos guardados</b> <span class="muted">(localStorage + exportación)</span>
+        <div class="rowbtn" style="margin-top:8px">
+          <button id="btnExportarTodo" type="button">Exportar TODO (JSON)</button>
+          <button id="btnImportar" type="button">Importar JSON</button>
+          <button id="btnBorrarTodo" type="button">Borrar TODO</button>
+        </div>
+        <input id="fileImport" type="file" accept="application/json" class="hide"/>
+        <div id="lista" class="muted" style="margin-top:10px">No hay grupos guardados.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const $ = (sel, root=document) => root.querySelector(sel);
+  const $$ = (sel, root=document) => Array.from(root.querySelectorAll(sel));
+  const fmt = (n) => (Math.round(n*10)/10).toFixed(1);
+  const now = () => new Date().toLocaleString();
+  const esc = (s) => String(s??"").replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const pill = (t, cls="") => `<span class="pill ${cls}">${esc(t)}</span>`;
+  const pillNivel = (v) => v==="NA" ? pill("No aplica","na") : pill(`Nivel ${v}`);
+  const safeText = (v) => String(v??"").replace(/\u00A0/g," ").replace(/\r\n/g,"\n").replace(/\r/g,"\n");
+  const copy = (text) => {
+    if (navigator.clipboard?.writeText) navigator.clipboard.writeText(text).catch(()=>prompt("Copia:", text));
+    else prompt("Copia:", text);
+  };
+
+  let ejercicios = [];
+  let N = 0;
+
+  const KEY = "revisor_pseint_ctmm_param_v1";
+  let storageOk = true;
+  let groupsCache = [];
+
+  const canLS = () => { try{ localStorage.setItem("__t","1"); localStorage.removeItem("__t"); return true; } catch(e){ return false; } };
+  const loadLS = () => { if(!canLS()) return null; try{ const raw = localStorage.getItem(KEY); return raw ? JSON.parse(raw) : []; } catch { return null; } };
+  const saveLS = (arr) => { if(!canLS()) throw new Error("localStorage bloqueado."); localStorage.setItem(KEY, JSON.stringify(arr)); };
+  const banner = () => {
+    const b=$("#storageBanner");
+    if(!storageOk){
+      b.classList.remove("hide");
+      b.innerHTML = `<span class="warn">Aviso:</span> El navegador bloquea almacenamiento. Los grupos se mantendrán mientras la pestaña esté abierta. Usa Exportar/Importar JSON.`;
+    } else b.classList.add("hide");
+  };
+  const syncStorage = () => { try{ saveLS(groupsCache); storageOk=true; } catch { storageOk=false; } banner(); };
+  (function initStorage(){
+    const g = loadLS();
+    if(g===null){ storageOk=false; groupsCache=[]; }
+    else groupsCache = Array.isArray(g)?g:[];
+    banner();
+  })();
+
+  function parseEjercicios(txt){
+    txt = safeText(txt);
+    const re = /(^|\n)\s*EJERCICIO\s+(\d+)\.\s*/gi;
+    let m, idxs=[];
+    while((m=re.exec(txt))!==null){
+      idxs.push({n:parseInt(m[2],10), mpos:m.index, end:re.lastIndex});
+    }
+    if(!idxs.length) return [];
+    let out=[];
+    for(let i=0;i<idxs.length;i++){
+      const start = idxs[i].end;
+      const end = (i+1<idxs.length) ? idxs[i+1].mpos : txt.length;
+      const body = txt.slice(start, end).trim();
+      out.push({n: idxs[i].n, text: (`EJERCICIO ${idxs[i].n}.\n`+body).trim()});
+    }
+    out.sort((a,b)=>a.n-b.n);
+    return out;
+  }
+
+  function parseGrupo(txt){
+    txt = safeText(txt);
+    const lines = txt.split("\n");
+    let estudiantes="", grupo="";
+    for(const ln of lines.slice(0,8)){
+      if(/^ESTUDIANTES\s*:/i.test(ln)) estudiantes = ln.split(":").slice(1).join(":").trim();
+      if(/^GRUPO\s*:/i.test(ln)) grupo = ln.split(":").slice(1).join(":").trim();
+    }
+    const blocks = parseEjercicios(txt);
+    const map = new Map(blocks.map(b=>[b.n, b.text.replace(/^EJERCICIO\s+\d+\.\s*/i,"").trimStart()]));
+    return {estudiantes, grupo, map};
+  }
+
+  function codeLines(code){
+    code = safeText(code);
+    return code.split("\n").map(l=>{
+      l=l.replace(/\t/g,"  ").replace(/\s+$/,"");
+      const p=l.indexOf("//");
+      if(p>=0) l=l.slice(0,p);
+      return l.trim();
+    }).filter(l=>l.length>0);
+  }
+
+  function hasStructure(lines){
+    let start=false,end=false;
+    for(const l of lines){
+      const x=l.toLowerCase();
+      if(x.startsWith("algoritmo ") || x.startsWith("proceso ")) start=true;
+      if(x.startsWith("finalgoritmo") || x.startsWith("finproceso")) end=true;
+    }
+    if(start && end) return {ok:true,msg:"Estructura Algoritmo/FinAlgoritmo detectada."};
+    if(start || end) return {ok:false,msg:"Estructura parcial (posible copia incompleta)."};
+    return {ok:false,msg:"No se detectó Algoritmo/Proceso (posible falta de encabezado)."};
+  }
+  function countDefinir(lines){
+    const re = /^definir\s+(.+?)\s+como\s+(entero|real|caracter|logico)\s*$/i;
+    let found=0;
+    for(const l of lines){
+      const m=l.match(re);
+      if(m) found += m[1].split(",").map(x=>x.trim()).filter(Boolean).length;
+    }
+    return found;
+  }
+  function hasInitialObjective(lines){
+    const limit = Math.min(lines.length, 12);
+    for(let i=0;i<limit;i++){
+      const x=lines[i].toLowerCase();
+      if(x.startsWith("mostrar ") || x.startsWith("escribir ")) return true;
+      if(x.startsWith("leer ")) break;
+    }
+    return false;
+  }
+  function checkReadPrompts(lines){
+    const probs=[];
+    for(let i=0;i<lines.length;i++){
+      const x=lines[i].toLowerCase();
+      if(!x.startsWith("leer ")) continue;
+      const prev = (i>0)? lines[i-1] : "";
+      const p = prev.toLowerCase();
+      if(!(p.startsWith("mostrar ") || p.startsWith("escribir "))){
+        probs.push(`Leer (línea ${i+1}) sin Mostrar/Escribir inmediatamente anterior.`);
+        continue;
+      }
+      let msg = prev.replace(/^(Mostrar|Escribir)\s+/i,"").trim();
+      msg = msg.replace(/^[\"“]/,"").replace(/[\"”]$/,"").trim();
+      const low = msg.toLowerCase();
+      if(!low.includes("y presione enter:")) probs.push(`Mensaje antes de Leer (línea ${i}) no contiene "y presione ENTER:".`);
+      if(!msg.endsWith(":")) probs.push(`Mensaje antes de Leer (línea ${i}) debe terminar con ":"`);
+    }
+    const anyLeer = lines.some(l=>l.toLowerCase().startsWith("leer "));
+    if(!anyLeer) probs.push("No se detectaron instrucciones Leer para entradas.");
+    return {ok:probs.length===0, probs};
+  }
+
+  function hasLoops(lines){
+    return lines.some(l=>{
+      const x=l.toLowerCase();
+      return x.startsWith("para ") || x.startsWith("mientras ") || x.startsWith("repetir");
+    });
+  }
+  function hasIf(lines){ return lines.some(l=>l.toLowerCase().startsWith("si ")); }
+  function hasElse(lines){
+    return lines.some(l=>{
+      const x=l.toLowerCase();
+      return x.startsWith("sino") || x.startsWith("sino si");
+    });
+  }
+  function hasSubprocess(lines){
+    return lines.some(l=>{
+      const x=l.toLowerCase();
+      return x.startsWith("subproceso ") || x.startsWith("funcion ");
+    });
+  }
+  function hasReturn(lines){ return lines.some(l=>l.toLowerCase().startsWith("retornar ")); }
+  function functionHasParams(lines){
+    return lines.some(l=>{
+      const x=l.toLowerCase();
+      if(!(x.startsWith("subproceso ") || x.startsWith("funcion "))) return false;
+      return /\(.*\)/.test(l);
+    });
+  }
+
+  function themeRulesOk(tema, lines){
+    const msgs=[]; let ok=true;
+    if(tema==="sec"){
+      if(hasIf(lines)){ ok=false; msgs.push("Se detectó 'Si' (no esperado en secuenciales)."); }
+      if(hasLoops(lines)){ ok=false; msgs.push("Se detectaron ciclos (no esperado en secuenciales)."); }
+    }
+    if(tema==="cond_simple"){
+      if(!hasIf(lines)){ ok=false; msgs.push("No se detectó 'Si ... Entonces'."); }
+      if(hasLoops(lines)){ ok=false; msgs.push("Se detectaron ciclos (no esperado)."); }
+    }
+    if(tema==="cond_multiple"){
+      if(!hasIf(lines)){ ok=false; msgs.push("No se detectó 'Si ... Entonces'."); }
+      if(!hasElse(lines)){ ok=false; msgs.push("No se detectó 'Sino / Sino Si' (requerido)."); }
+      if(hasLoops(lines)){ ok=false; msgs.push("Se detectaron ciclos (no esperado)."); }
+    }
+    if(tema==="rep"){
+      if(!hasLoops(lines)){ ok=false; msgs.push("No se detectó Para/Mientras/Repetir (requerido)."); }
+    }
+    if(tema==="fun_sin"){
+      if(!hasSubprocess(lines)){ ok=false; msgs.push("No se detectó SubProceso/Funcion (requerido)."); }
+      if(hasReturn(lines)){ ok=false; msgs.push("Se detectó Retornar (no esperado)."); }
+      if(functionHasParams(lines)){ ok=false; msgs.push("Se detectaron parámetros (no esperado)."); }
+    }
+    if(tema==="fun_ret_sin"){
+      if(!hasSubprocess(lines)){ ok=false; msgs.push("No se detectó Funcion/SubProceso (requerido)."); }
+      if(!hasReturn(lines)){ ok=false; msgs.push("No se detectó Retornar (requerido)."); }
+      if(functionHasParams(lines)){ ok=false; msgs.push("Se detectaron parámetros (no esperado)."); }
+    }
+    if(tema==="fun_ret_con"){
+      if(!hasSubprocess(lines)){ ok=false; msgs.push("No se detectó Funcion/SubProceso (requerido)."); }
+      if(!hasReturn(lines)){ ok=false; msgs.push("No se detectó Retornar (requerido)."); }
+      if(!functionHasParams(lines)){ ok=false; msgs.push("No se detectaron parámetros (requerido)."); }
+    }
+    return {ok, msg: msgs.length?msgs.join(" "):"Cumple (heurística)."};
+  }
+
+  function gradeFromChecks(flags){
+    const keys = Object.keys(flags);
+    const ok = keys.reduce((a,k)=>a+(flags[k]?1:0),0);
+    const g = 1 + (ok/keys.length)*4;
+    return Math.max(1, Math.min(5, g));
+  }
+  function ctmmLevelFromGrade(g){ return (g<3.0)?1:(g<4.0)?2:3; }
+  function ctmmAppliesByTema(tema){
+    return {
+      "Abstracción": true,
+      "Descomposición": tema.startsWith("fun"),
+      "Pensamiento lógico/algorítmico": true,
+      "Depuración": true
+    };
+  }
+  function ctmmForExercise(tema, lines, grade){
+    const lvl = ctmmLevelFromGrade(grade);
+    const applies = ctmmAppliesByTema(tema);
+    const joined = lines.join(" ").toLowerCase();
+    const depEvidence = joined.includes("error") || joined.includes("verifi") || joined.includes("valid") || joined.includes("inval") || joined.includes("no valida") || joined.includes("no válida");
+    return {
+      "Abstracción": applies["Abstracción"] ? lvl : "NA",
+      "Descomposición": applies["Descomposición"] ? (hasSubprocess(lines) ? lvl : "NA") : "NA",
+      "Pensamiento lógico/algorítmico": applies["Pensamiento lógico/algorítmico"] ? lvl : "NA",
+      "Depuración": applies["Depuración"] ? (depEvidence ? lvl : "NA") : "NA"
+    };
+  }
+  function ctmmAggregate(perExercise){
+    const skills=["Abstracción","Descomposición","Pensamiento lógico/algorítmico","Depuración"];
+    const global={};
+    for(const sk of skills){
+      const vals = perExercise.map(e=>e.ctmm[sk]).filter(v=>v!=="NA");
+      if(!vals.length){ global[sk]="NA"; continue; }
+      const avg = vals.reduce((a,b)=>a+b,0)/vals.length;
+      global[sk]=Math.max(1,Math.min(3,Math.round(avg)));
+    }
+    const o = skills.map(sk=>global[sk]).filter(v=>v!=="NA");
+    const overall = o.length ? Math.max(1,Math.min(3,Math.round(o.reduce((a,b)=>a+b,0)/o.length))) : "NA";
+    return {global, overall};
+  }
+
+  function enableReviewButtons(on){
+    ["btnRevisarTodo","btnGuardarGrupo","btnPDFActual","btnLimpiarArea"].forEach(id=>$("#"+id).disabled=!on);
+  }
+
+  function buildTable(){
+    const body=$("#ejBody");
+    body.innerHTML="";
+    for(let i=1;i<=N;i++){
+      const ex = ejercicios.find(e=>e.n===i) || {n:i,text:`EJERCICIO ${i}.\n(Sin enunciado)`};
+      const tr=document.createElement("tr");
+      tr.dataset.ej=String(i);
+      tr.innerHTML = `
+        <td><div class="enun">${esc(ex.text)}</div></td>
+        <td>
+          <textarea class="code" placeholder="Pegue aquí el código PSeInt del Ejercicio ${i}..."></textarea>
+          <div class="rowbtn">
+            <button type="button" class="btnRevFila">Revisar fila</button>
+            <button type="button" class="btnCopiarRes">Copiar resultado</button>
+          </div>
+        </td>
+        <td><div class="res result"></div></td>
+        <td class="gradeCell">—</td>
+      `;
+      body.appendChild(tr);
+    }
+
+    $$("#ejBody tr").forEach(tr=>{
+      const ta = $(".code", tr);
+      let t=null;
+      const auto = () => { if(t) clearTimeout(t); t=setTimeout(()=>{ reviewRow(tr); updateFinalAndCTMM(); }, 350); };
+      ta.addEventListener("input", auto);
+      ta.addEventListener("paste", ()=>setTimeout(()=>{ reviewRow(tr); updateFinalAndCTMM(); }, 70));
+      $(".btnRevFila", tr).onclick = ()=>{ reviewRow(tr); updateFinalAndCTMM(); };
+      $(".btnCopiarRes", tr).onclick = ()=>{ copy(tr.__report || "(Primero revisa la fila.)"); };
+    });
+
+    $("#tablaWrap").classList.remove("hide");
+    enableReviewButtons(true);
+    updateFinalAndCTMM();
+  }
+
+  function reviewRow(tr){
+    const tema = $("#tema").value;
+    const reqPrompts = $("#chkPrompts").checked;
+    const reqVars = $("#chkVars").checked;
+    const reqMsg = $("#chkMensaje").checked;
+
+    const ej = parseInt(tr.dataset.ej,10);
+    const code = $(".code", tr).value || "";
+    const lines = codeLines(code);
+
+    const resultEl = $(".result", tr);
+    const gradeEl = $(".gradeCell", tr);
+
+    if(!lines.length){
+      resultEl.textContent = "Sin código.";
+      gradeEl.textContent = "1.0";
+      tr.dataset.grade = "1.0";
+      tr.__ctmm = ctmmForExercise(tema, [], 1.0);
+      tr.__report = "Sin código.";
+      return;
+    }
+
+    const struct = hasStructure(lines);
+    const nDef = countDefinir(lines);
+    const varsOk = reqVars ? (nDef>0) : true;
+    const msgOk = reqMsg ? hasInitialObjective(lines) : true;
+    const prom = reqPrompts ? checkReadPrompts(lines) : {ok:true, probs:[]};
+    const theme = themeRulesOk(tema, lines);
+
+    const flags = {estructura: struct.ok, variables: varsOk, mensaje: msgOk, prompts: prom.ok, tema: theme.ok};
+    const grade = gradeFromChecks(flags);
+
+    const out=[];
+    out.push(`EJERCICIO ${ej}`);
+    out.push("");
+    out.push(`${struct.ok?"✔":"✖"} Estructura: ${struct.msg}`);
+    out.push(`${varsOk?"✔":"✖"} Variables/Tipos: ${reqVars ? (varsOk?`Se detectó Definir (variables: ${nDef}).`:"No se detectó Definir ... Como ...") : "No exigido por el docente."}`);
+    out.push(`${msgOk?"✔":"✖"} Mensaje inicial (objetivo): ${reqMsg ? (msgOk?"Detectado.":"No detectado.") : "No exigido por el docente."}`);
+    if(reqPrompts){
+      if(prom.ok) out.push(`✔ Prompts antes de Leer: cumple “y presione ENTER:” y ':'`);
+      else{
+        out.push("✖ Prompts antes de Leer:");
+        prom.probs.forEach(p=>out.push("  - "+p));
+      }
+    } else out.push("✔ Prompts antes de Leer: no exigido por el docente.");
+    out.push(`${theme.ok?"✔":"✖"} Reglas del tema: ${theme.msg}`);
+    out.push("");
+    out.push(`NOTA PROPUESTA (1–5): ${fmt(grade)}`);
+
+    resultEl.textContent = out.join("\n");
+    gradeEl.textContent = fmt(grade);
+    tr.dataset.grade = String(grade);
+    tr.__ctmm = ctmmForExercise(tema, lines, grade);
+    tr.__report = out.join("\n");
+  }
+
+  function getGrade(tr){
+    const g = parseFloat(tr.dataset.grade);
+    if(Number.isFinite(g)) return g;
+    const t = $(".gradeCell", tr)?.textContent?.trim()?.replace(",",".") ?? "1.0";
+    const g2 = parseFloat(t);
+    return Number.isFinite(g2) ? g2 : 1.0;
+  }
+
+  function updateFinalAndCTMM(){
+    const trs = $$("#ejBody tr");
+    if(!trs.length){ $("#notaFinal").textContent="—"; return; }
+    const grades = trs.map(getGrade);
+    const avg = grades.reduce((a,b)=>a+b,0)/grades.length;
+    $("#notaFinal").textContent = fmt(avg);
+
+    const per = trs.map(tr=>({ej:parseInt(tr.dataset.ej,10), ctmm: tr.__ctmm || {"Abstracción":1,"Descomposición":"NA","Pensamiento lógico/algorítmico":1,"Depuración":"NA"}}));
+    const agg = ctmmAggregate(per);
+
+    $("#ctmmHeadEjs").innerHTML = trs.map(tr=>`<span class="pill">Ej${esc(tr.dataset.ej)}</span>`).join(" ");
+
+    const skills=["Abstracción","Descomposición","Pensamiento lógico/algorítmico","Depuración"];
+    const body=$("#ctmmBody");
+    body.innerHTML="";
+    for(const sk of skills){
+      const tds = per.map(p=>pillNivel(p.ctmm[sk])).join(" ");
+      const tr=document.createElement("tr");
+      tr.innerHTML = `<td><b>${esc(sk)}</b></td><td>${tds}</td><td>${pillNivel(agg.global[sk])}</td>`;
+      body.appendChild(tr);
+    }
+    $("#ctmmGlobal").innerHTML = (agg.overall==="NA") ? pill("No aplica","na") : pillNivel(agg.overall)+" <span class='muted'>(sugerido)</span>";
+    return {avg, per};
+  }
+
+  const safeFile = (name) => (name||"grupo").toLowerCase().replace(/[^a-z0-9]+/g,"_").slice(0,40);
+  const downloadJSON = (obj, filename) => {
+    const blob = new Blob([JSON.stringify(obj,null,2)],{type:"application/json"});
+    const url = URL.createObjectURL(blob);
+    const a=document.createElement("a"); a.href=url; a.download=filename;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  function snapshotCurrent(){
+    const tema = $("#tema").value;
+    const grupo = ($("#grupo").value||"").trim() || "(Sin nombre)";
+    const obs = $("#obs").value || "";
+    const trs = $$("#ejBody tr");
+    const state = updateFinalAndCTMM();
+    const id = (crypto?.randomUUID) ? crypto.randomUUID() : String(Date.now())+Math.random().toString(16).slice(2);
+    const rows = trs.map(tr=>{
+      const ej = parseInt(tr.dataset.ej,10);
+      return {
+        ej,
+        enunciado: ejercicios.find(e=>e.n===ej)?.text ?? "",
+        code: $(".code", tr).value || "",
+        result: $(".result", tr).textContent || "",
+        grade: fmt(getGrade(tr)),
+        ctmm: tr.__ctmm || {"Abstracción":1,"Descomposición":"NA","Pensamiento lógico/algorítmico":1,"Depuración":"NA"}
+      };
+    });
+    return {id, tema, grupo, fecha: now(), notaFinal: fmt(state?.avg ?? 1.0), obs, rows};
+  }
+
+  function buildReportHTML(s){
+    const rows = s.rows.map(r=>`
+      <tr>
+        <td style="width:18%;font-weight:800">Ejercicio ${esc(r.ej)}</td>
+        <td style="white-space:pre-wrap;font-family:Consolas,monospace;font-size:10px">${esc(r.result||"")}</td>
+      </tr>`).join("");
+
+    const skills=["Abstracción","Descomposición","Pensamiento lógico/algorítmico","Depuración"];
+    const agg = ctmmAggregate(s.rows.map(r=>({ctmm:r.ctmm})));
+    const ctmmRows = skills.map(sk=>{
+      const vals = s.rows.map(r=>r.ctmm[sk]);
+      const f = (v)=> v==="NA"?"No aplica":`Nivel ${v}`;
+      return `<tr>
+        <td style="font-weight:800">${esc(sk)}</td>
+        <td>${esc(vals.map(f).join(" | "))}</td>
+        <td>${esc(f(agg.global[sk]))}</td>
+      </tr>`;
+    }).join("");
+
+    return `<!doctype html><html><head><meta charset="utf-8">
+      <title>Informe - ${esc(s.grupo)}</title>
+      <style>
+        @page{size:A4;margin:10mm}
+        body{font-family:Arial;font-size:11px;line-height:1.15}
+        h1{font-size:15px;margin:0 0 6px}
+        h2{font-size:12px;margin:10px 0 6px}
+        table{width:100%;border-collapse:collapse}
+        td,th{border:1px solid #333;padding:5px;vertical-align:top}
+        th{background:#f0f0f0;text-align:left}
+        table, tr, td, th{page-break-inside:avoid}
+      </style></head><body>
+      <h1>INFORME – REVISOR DIDÁCTICO PSEINT (Parametrizable)</h1>
+      <div><b>Grupo / Pareja:</b> ${esc(s.grupo)}</div>
+      <div><b>Tema:</b> ${esc($("#tema").selectedOptions[0].textContent)}</div>
+      <div><b>Fecha:</b> ${esc(s.fecha)}</div>
+      <div><b>Nota final (promedio real):</b> ${esc(s.notaFinal)}</div>
+
+      <h2>Resumen de revisión</h2>
+      <table>
+        <thead><tr><th>EJERCICIO</th><th>RESULTADO DE LA REVISIÓN</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+
+      <h2>CTMM</h2>
+      <table>
+        <thead><tr><th>Habilidad</th><th>Ejercicios</th><th>Global</th></tr></thead>
+        <tbody>${ctmmRows}</tbody>
+      </table>
+
+      <h2>Observaciones</h2>
+      <div style="white-space:pre-wrap">${esc(s.obs||"")}</div>
+      </body></html>`;
+  }
+
+  function downloadHTMLReport(s){
+    const blob = new Blob([buildReportHTML(s)],{type:"text/html"});
+    const url = URL.createObjectURL(blob);
+    const a=document.createElement("a");
+    a.href=url;
+    a.download=`informe_${safeFile(s.grupo)}_${s.id}.html`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  function printPDF(s){
+    const w = window.open("", "_blank");
+    if(!w){
+      alert("El navegador bloqueó la ventana emergente. Se descargará el informe en HTML para imprimir como PDF (Ctrl+P).");
+      downloadHTMLReport(s);
+      return;
+    }
+    w.document.open();
+    w.document.write(buildReportHTML(s));
+    w.document.close();
+    setTimeout(()=>{ w.focus(); w.print(); }, 350);
+  }
+
+  function renderList(){
+    const list=$("#lista");
+    if(!groupsCache.length){ list.textContent="No hay grupos guardados."; return; }
+    let html = `<table><thead><tr><th>Grupo</th><th>Fecha</th><th>Nota</th><th>Acciones</th></tr></thead><tbody>`;
+    for(const g of groupsCache){
+      html += `<tr>
+        <td><b>${esc(g.grupo)}</b><div class="muted">${esc(g.tema||"")}</div></td>
+        <td class="muted">${esc(g.fecha)}</td>
+        <td class="gradeCell">${esc(g.notaFinal)}</td>
+        <td>
+          <div class="rowbtn">
+            <button type="button" class="bLoad" data-id="${esc(g.id)}">Cargar</button>
+            <button type="button" class="bPDF" data-id="${esc(g.id)}">PDF</button>
+            <button type="button" class="bHTML" data-id="${esc(g.id)}">HTML</button>
+            <button type="button" class="bJSON" data-id="${esc(g.id)}">JSON</button>
+            <button type="button" class="bDel" data-id="${esc(g.id)}">Eliminar</button>
+          </div>
+        </td>
+      </tr>`;
+    }
+    html += `</tbody></table>`;
+    list.innerHTML = html;
+
+    $$(".bLoad", list).forEach(b=>b.onclick=()=>{
+      const id=b.dataset.id;
+      const g=groupsCache.find(x=>x.id===id);
+      if(g) loadSnapshot(g);
+    });
+    $$(".bPDF", list).forEach(b=>b.onclick=()=>{
+      const id=b.dataset.id;
+      const g=groupsCache.find(x=>x.id===id);
+      if(g) printPDF(g);
+    });
+    $$(".bHTML", list).forEach(b=>b.onclick=()=>{
+      const id=b.dataset.id;
+      const g=groupsCache.find(x=>x.id===id);
+      if(g) downloadHTMLReport(g);
+    });
+    $$(".bJSON", list).forEach(b=>b.onclick=()=>{
+      const id=b.dataset.id;
+      const g=groupsCache.find(x=>x.id===id);
+      if(g) downloadJSON(g, `grupo_${safeFile(g.grupo)}_${id}.json`);
+    });
+    $$(".bDel", list).forEach(b=>b.onclick=()=>{
+      const id=b.dataset.id;
+      groupsCache = groupsCache.filter(x=>x.id!==id);
+      syncStorage(); renderList();
+    });
+  }
+
+  function loadSnapshot(g){
+    $("#grupo").value = g.grupo || "";
+    $("#obs").value = g.obs || "";
+    const trs = $$("#ejBody tr");
+    for(const tr of trs){
+      const ej = parseInt(tr.dataset.ej,10);
+      const row = g.rows.find(r=>r.ej===ej);
+      $(".code", tr).value = row?.code || "";
+      $(".result", tr).textContent = row?.result || "";
+      $(".gradeCell", tr).textContent = row?.grade || "—";
+      tr.dataset.grade = (row?.grade || "").replace(",",".");
+      tr.__ctmm = row?.ctmm || null;
+      tr.__report = row?.result || null;
+    }
+    updateFinalAndCTMM();
+  }
+
+  $("#btnCargarEj").onclick = ()=>$("#fileEj").click();
+  $("#fileEj").addEventListener("change", async (ev)=>{
+    const f = ev.target.files?.[0];
+    if(!f) return;
+    const txt = await f.text();
+    const parsed = parseEjercicios(txt);
+    const n = parseInt($("#numEj").value,10);
+
+    if(!Number.isFinite(n) || n<=0){ alert("NÚM. EJERCICIOS inválido."); return; }
+    if(parsed.length < n){
+      alert(`Se detectaron ${parsed.length} ejercicios en el TXT, pero N = ${n}. Revisa separadores EJERCICIO k.`);
+      return;
+    }
+
+    ejercicios = parsed.filter(e=>e.n>=1 && e.n<=n);
+    N = n;
+    $("#estadoEj").textContent = `Cargados ${ejercicios.length}/${N} ejercicios desde: ${f.name}`;
+    $("#btnIniciar").disabled = false;
+    ev.target.value="";
+  });
+
+  $("#btnIniciar").onclick = ()=>{
+    if(!N){ alert("Primero cargue ejercicios."); return; }
+    buildTable();
+    $("#estadoGrupo").textContent="Sin grupo cargado.";
+  };
+
+  $("#btnResetCfg").onclick = ()=>{
+    ejercicios = []; N = 0;
+    $("#estadoEj").textContent="Sin archivo cargado.";
+    $("#btnIniciar").disabled=true;
+    $("#tablaWrap").classList.add("hide");
+    enableReviewButtons(false);
+  };
+
+  $("#btnCargarGrupo").onclick = ()=>$("#fileGrupo").click();
+  $("#fileGrupo").addEventListener("change", async (ev)=>{
+    if(!N){ alert("Primero cargue ejercicios e inicie revisión."); return; }
+    const f = ev.target.files?.[0];
+    if(!f) return;
+    const txt = await f.text();
+    const g = parseGrupo(txt);
+
+    const name = g.grupo || g.estudiantes || f.name.replace(/\.[^.]+$/,"");
+    $("#grupo").value = name || $("#grupo").value;
+
+    const trs = $$("#ejBody tr");
+    trs.forEach(tr=>{
+      const ej = parseInt(tr.dataset.ej,10);
+      const code = g.map.get(ej) || "";
+      $(".code", tr).value = code;
+      tr.__report=null; tr.__ctmm=null;
+      $(".result", tr).textContent="";
+      $(".gradeCell", tr).textContent="—";
+      tr.dataset.grade="";
+      if(code.trim()) reviewRow(tr);
+    });
+    updateFinalAndCTMM();
+    $("#estadoGrupo").textContent = `Grupo cargado desde: ${f.name}`;
+    ev.target.value="";
+  });
+
+  $("#btnRevisarTodo").onclick = ()=>{ $$("#ejBody tr").forEach(tr=>reviewRow(tr)); updateFinalAndCTMM(); };
+  $("#btnGuardarGrupo").onclick = ()=>{
+    $$("#ejBody tr").forEach(tr=>{ if(!tr.__report) reviewRow(tr); });
+    const s = snapshotCurrent();
+    groupsCache.unshift(s);
+    syncStorage();
+    renderList();
+    alert("Grupo guardado.");
+  };
+  $("#btnPDFActual").onclick = ()=>{
+    $$("#ejBody tr").forEach(tr=>{ if(!tr.__report) reviewRow(tr); });
+    printPDF(snapshotCurrent());
+  };
+  $("#btnLimpiarArea").onclick = ()=>{
+    $("#grupo").value=""; $("#obs").value="";
+    $$("#ejBody tr").forEach(tr=>{
+      $(".code", tr).value="";
+      $(".result", tr).textContent="";
+      $(".gradeCell", tr).textContent="—";
+      tr.dataset.grade="";
+      tr.__ctmm=null; tr.__report=null;
+    });
+    $("#notaFinal").textContent="—";
+    updateFinalAndCTMM();
+  };
+
+  $("#btnCopiarInforme").onclick = ()=>{
+    $$("#ejBody tr").forEach(tr=>{ if(!tr.__report) reviewRow(tr); });
+    const s = snapshotCurrent();
+    const txt =
+      `INFORME GLOBAL – REVISOR DIDÁCTICO PSEINT (Parametrizable)\n\n`+
+      `Grupo / Pareja: ${s.grupo}\nTema: ${$("#tema").selectedOptions[0].textContent}\nFecha: ${s.fecha}\nNota final (promedio real): ${s.notaFinal}\n\n`+
+      s.rows.map(r=>r.result||"(Sin revisión)").join("\n\n")+
+      `\n\nObservaciones del docente\n${s.obs?.trim()?s.obs:"(Sin observaciones)"}`;
+    copy(txt);
+  };
+  $("#btnDescargarHTML").onclick = ()=>{ $$("#ejBody tr").forEach(tr=>{ if(!tr.__report) reviewRow(tr); }); downloadHTMLReport(snapshotCurrent()); };
+  $("#btnDescargarJSONActual").onclick = ()=>{ $$("#ejBody tr").forEach(tr=>{ if(!tr.__report) reviewRow(tr); }); const s=snapshotCurrent(); downloadJSON(s, `grupo_${safeFile(s.grupo)}_${s.id}.json`); };
+
+  $("#btnExportarTodo").onclick = ()=>downloadJSON(groupsCache, "grupos_revisor_pseint_param.json");
+  $("#btnImportar").onclick = ()=>$("#fileImport").click();
+  $("#fileImport").addEventListener("change", async (ev)=>{
+    const f=ev.target.files?.[0];
+    if(!f) return;
+    try{
+      const data = JSON.parse(await f.text());
+      if(!Array.isArray(data)) throw new Error("El JSON debe ser una lista.");
+      for(let i=data.length-1;i>=0;i--) groupsCache.unshift(data[i]);
+      syncStorage(); renderList();
+      alert("Importación completada.");
+    }catch(e){ alert("Error importando: "+e); }
+    finally{ ev.target.value=""; }
+  });
+
+  $("#btnBorrarTodo").onclick = ()=>{
+    if(!confirm("¿Borrar TODOS los grupos guardados?")) return;
+    groupsCache=[];
+    try{ localStorage.removeItem(KEY); }catch{}
+    syncStorage(); renderList();
+  };
+
+  enableReviewButtons(false);
+  renderList();
+})();
+</script>
+</body>
+</html>
